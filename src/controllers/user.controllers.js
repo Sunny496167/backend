@@ -4,6 +4,7 @@ import { User} from '../models/user.models.js';
 import {uploadOnCloudinary} from '../utils/cloudinary.js';
 import { ApiResponse } from '../utils/ApiResponce.js';
 import jwt from 'jsonwebtoken'
+import mongoose from 'mongoose';
 
 
 
@@ -215,7 +216,7 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
 			new ApiResponse(
 	            200,
 	            {
-					user,
+					
 	                accessToken,
 	                refreshToken: newRefreshToken
 	            },
@@ -227,29 +228,63 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
 	}
 })
 
-const changeCurrentPassword = asyncHandler( async(req,res)  => {
-	const {oldPassword, newPassword} = req.body
+// const changeCurrentPassword = asyncHandler( async(req,res)  => {
+// 	const {oldPassword, newPassword} = req.body
+// 	console.log(req.body)
+// 	console.log(req.user?._id)
+// 	console.log(oldPassword)
+// 	console.log(newPassword)
+// 	const user = await User.findById(req.user?._id)
+// 	if (!user) {
+//         throw new ApiError(404, "User not found");
+//     }
+// 	const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+// 	console.log(oldPassword)
+// 	if(!isPasswordCorrect) {
+//         throw new ApiError(401, "Old password is incorrect");
+//     }
 	
-	const user = await User.findById(req.user?._id)
-	const isPasswordCorrect = await User.isPasswordCorrect(oldPassword)
+// 	user.password = newPassword
+// 	await user.save({validateBeforeSave: false})
 	
-	if(!isPasswordCorrect) {
-        throw new ApiError(401, "Old password is incorrect");
+// 	return res
+// 	.status(200)
+// 	.json(
+// 		new ApiResponse(
+// 			200,
+//             {},
+//             'Password changed successfully'
+// 		)
+// 	)
+// })
+
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+        throw new ApiError(400, 'Old password and new password are required');
     }
-	
-	user.password = newPassword
-	await user.save({validateBeforeSave: false})
-	
-	return res
-	.status(200)
-	.json(
-		new ApiResponse(
-			200,
-            {},
-            'Password changed successfully'
-		)
-	)
-})
+
+    const user = await User.findById(req.user?._id);
+
+    if (!user) {
+        throw new ApiError(404, 'User not found');
+    }
+
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+
+    if (!isPasswordCorrect) {
+        throw new ApiError(401, 'Old password is incorrect');
+    }
+
+    user.password = newPassword;
+    await user.save({ validateBeforeSave: false });
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, {}, 'Password changed successfully'));
+});
+
 
 const getCurrentUser = asyncHandler( async(req, res) => {
 	return res
