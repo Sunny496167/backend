@@ -228,36 +228,6 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
 	}
 })
 
-// const changeCurrentPassword = asyncHandler( async(req,res)  => {
-// 	const {oldPassword, newPassword} = req.body
-// 	console.log(req.body)
-// 	console.log(req.user?._id)
-// 	console.log(oldPassword)
-// 	console.log(newPassword)
-// 	const user = await User.findById(req.user?._id)
-// 	if (!user) {
-//         throw new ApiError(404, "User not found");
-//     }
-// 	const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
-// 	console.log(oldPassword)
-// 	if(!isPasswordCorrect) {
-//         throw new ApiError(401, "Old password is incorrect");
-//     }
-	
-// 	user.password = newPassword
-// 	await user.save({validateBeforeSave: false})
-	
-// 	return res
-// 	.status(200)
-// 	.json(
-// 		new ApiResponse(
-// 			200,
-//             {},
-//             'Password changed successfully'
-// 		)
-// 	)
-// })
-
 const changeCurrentPassword = asyncHandler(async (req, res) => {
     const { oldPassword, newPassword } = req.body;
 
@@ -298,36 +268,38 @@ const getCurrentUser = asyncHandler( async(req, res) => {
 	)
 })
 
-const updateAccountDetails = asyncHandler( async(req, res) => {
-	const {fullName, email} = req.body
-	
-	if(!email || !fullName) {
-		throw new ApiError(400, 'Email and full name are required')
-	}
-	
-	const user = await User.findByIdAndUpdate(
-		req.user?._id,
-		{
-			$set: {
-				fullName,
+const updateAccountDetails = asyncHandler(async (req, res) => {
+    const { fullName, email } = req.body;
+
+    if (!email || !fullName) {
+        throw new ApiError(400, 'Email and full name are required');
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set: {
+                fullName,
                 email,
-			}
-		},
-		{
-			new: true,
-		}
-	).select("-password")
-	
-	return res
-	.status(200)
-	.json(
-		new ApiResponse(
-			200,
-			user,
+            }
+        },
+        {
+            new: true,
+        }
+    ).select("-password");
+
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            user,
             'User account details updated successfully'
-		)
-	)
-})
+        )
+    );
+});
 
 const updateUserAvatar = asyncHandler( async(req, rea) => {
 	const avatarLocalPath = req.file?.path
