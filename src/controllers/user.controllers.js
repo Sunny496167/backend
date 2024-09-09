@@ -326,8 +326,14 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
   const user = await User.findByIdAndUpdate(
     req.user._id,
-    { $set: { avatar: avatar.url } },
-    { new: true }
+    { 
+      $set: { 
+        avatar: avatar.url 
+      } 
+    },
+    { 
+      new: true 
+    }
   ).select("-password");
 
   if (!user) {
@@ -340,33 +346,41 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 });
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
-  const coverImageLocalPath = req.file?.path;
+  const coverImagePath = req.file?.path;
 
-  if (!coverImageLocalPath) {
+  if (!coverImagePath) {
     throw new ApiError(400, "Cover image is required");
   }
+  
+  // Fetch the current user's cover image
+  const currentUser = await User.findById(req.user._id).select("coverImage");
 
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+  if (currentUser?.coverImage) {
+    // Extract the public ID from the current cover image URL
+    const oldCoverImage = currentUser.coverImage.split('/').pop().split('.')[0];
 
-  if (!coverImage.url) {
+    // Delete the old image from Cloudinary
+    await deleteFromCloudinary(oldCoverImage);
+  }
+
+  // Upload the new cover image to Cloudinary
+  const coverImage = await uploadOnCloudinary(coverImagePath);
+
+  if (!coverImage) {
     throw new ApiError(400, "Failed to upload cover image");
   }
 
   const user = await User.findByIdAndUpdate(
-    req.user?._id,
-    {
-      $set: {
-        coverImage: coverImage.url,
-      },
-    },
-    {
-      new: true,
-    }
-  );
+    req.user._id,
+    { $set: { coverImage: coverImage.url } },
+    { new: true }
+  ).select("-password");
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "User cover image updated successfully"));
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  return res.status(200).json(new ApiResponse(200, user, "User cover image updated successfully"));
 });
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
