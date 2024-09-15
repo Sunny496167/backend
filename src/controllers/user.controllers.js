@@ -390,10 +390,28 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Username is missing");
   }
 
+  const searchUsername = username.trim().toLowerCase();
+  console.log("Searching for username:", searchUsername);
+
+  // Using regex to ensure case-insensitive match
+  const user = await User.findOne({
+    username: { 
+      $regex: new RegExp("^" + searchUsername, "i") // Case-insensitive regex match
+    }
+  });
+
+  console.log("User found:", user);
+
+  // If no user is found, throw error
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  // Use the user's _id for further aggregation
   const channel = await User.aggregate([
     {
       $match: {
-        username: username?.toLowerCase(),
+        _id: user._id, // Match by user ID
       },
     },
     {
@@ -423,7 +441,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         isSubscribed: {
           $cond: {
             if: {
-              $in: [req.user?._id, "subscribers.subscriber"],
+              $in: [req.user?._id, "$subscribers.subscriber"],
             },
             then: true,
             else: false,
@@ -446,20 +464,18 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     },
   ]);
 
-  if (!channel?.length) {
-    throw new ApiError(404, "Channel does not found");
+  // If no channel is found, return error
+  if (!channel.length) {
+    throw new ApiError(404, "Channel not found");
   }
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        channel[0],
-        "User channel profile fetched successfully"
-      )
-    );
+  // Respond with the channel details
+  return res.status(200).json(
+    new ApiResponse(200, channel[0], "User channel profile fetched successfully")
+  );
 });
+
+
 
 const getWatchHistory = asyncHandler(async (req, res) => {
   const user = await User.aggregate([
